@@ -36,6 +36,8 @@ jobs:
       
       # Node.js Dependency Scan (Trivy FS)  
       - name: Run Trivy Node Dependency Scan
+        id: node_scan
+        continue-on-error: true
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
@@ -45,7 +47,7 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: 1
-
+          
       - name: Upload Node.js SARIF
         uses: github/codeql-action/upload-sarif@v3
         with:
@@ -58,8 +60,12 @@ jobs:
           path: nodejs-scan.sarif
           retention-days: 30
 
+      - name: Fail if Node Scan Failed
+        if: steps.node_scan.outcome == 'failure'
+        run: exit 1
+
       
-      # Build Docker Image (local only)
+      # Build Docker Image
       - name: Build Docker Image
         run: |
           docker build -t devops-tutorial:${{ github.sha }} .
@@ -67,6 +73,8 @@ jobs:
       
       # Docker Image Scan (Trivy Image)  
       - name: Run Trivy Image Scan
+        id: image_scan
+        continue-on-error: true
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: devops-tutorial:${{ github.sha }}
@@ -87,6 +95,10 @@ jobs:
           name: image-scan-${{ github.sha }}
           path: image-scan.sarif
           retention-days: 30
+
+      - name: Fail if Image Scan Failed
+        if: steps.image_scan.outcome == 'failure'
+        run: exit 1
 
       
       # Login DockerHub   
