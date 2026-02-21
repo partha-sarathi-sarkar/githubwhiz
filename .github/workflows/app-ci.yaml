@@ -52,6 +52,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: nodejs-scan.sarif
+          category: nodejs-dependency-scan
 
       - name: Upload Node Scan Artifact
         uses: actions/upload-artifact@v4
@@ -84,6 +85,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: image-scan.sarif
+          category: docker-image-scan
 
       - name: Upload Image Scan Artifact
         uses: actions/upload-artifact@v4
