@@ -1,0 +1,140 @@
+name: Build, Scan and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+
+    steps:
+      
+      # Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      
+      # Extract Version from package.json
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      
+      # Setup Docker Buildx 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      
+      # Node.js Dependency Scan (Trivy FS)  
+      - name: Run Trivy Node Dependency Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: nodejs-scan.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: 1
+
+      - name: Upload Node.js SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: nodejs-scan.sarif
+
+      - name: Upload Node Scan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nodejs-scan-${{ github.sha }}
+          path: nodejs-scan.sarif
+          retention-days: 30
+
+      
+      # Build Docker Image (local only)
+      - name: Build Docker Image
+        run: |
+          docker build -t devops-tutorial:${{ github.sha }} .
+
+      
+      # Docker Image Scan (Trivy Image)  
+      - name: Run Trivy Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: devops-tutorial:${{ github.sha }}
+          format: sarif
+          output: image-scan.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: 1
+
+      - name: Upload Image SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: image-scan.sarif
+
+      - name: Upload Image Scan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-scan-${{ github.sha }}
+          path: image-scan.sarif
+          retention-days: 30
+
+      
+      # Login DockerHub   
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      
+      # Login GHCR    
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      
+      # Tag Image     
+      - name: Tag Image
+        run: |
+          docker tag devops-tutorial:${{ github.sha }} \
+          ${{ secrets.DOCKER_USERNAME }}/devops-tutorial:${{ github.sha }}
+
+          docker tag devops-tutorial:${{ github.sha }} \
+          ${{ secrets.DOCKER_USERNAME }}/devops-tutorial:${{ steps.version.outputs.VERSION }}
+
+          docker tag devops-tutorial:${{ github.sha }} \
+          ${{ secrets.DOCKER_USERNAME }}/devops-tutorial:latest
+
+          docker tag devops-tutorial:${{ github.sha }} \
+          ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+          docker tag devops-tutorial:${{ github.sha }} \
+          ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+
+          docker tag devops-tutorial:${{ github.sha }} \
+          ghcr.io/${{ github.repository }}:latest
+
+      
+      # Push Images
+      - name: Push Images
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/devops-tutorial:${{ github.sha }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/devops-tutorial:${{ steps.version.outputs.VERSION }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/devops-tutorial:latest
+
+          docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+          docker push ghcr.io/${{ github.repository }}:latest

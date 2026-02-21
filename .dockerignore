@@ -1,0 +1,34 @@
+# Node modules (installed inside container)
+node_modules
+
+# Git
+.git
+.gitignore
+
+# Docker artifacts
+*.tar
+
+# Logs
+*.log
+logs
+
+# Coverage
+coverage
+
+# Local env files
+.env
+.env.*
+
+# GitHub
+.github
+
+# Editor
+.vscode
+.idea
+
+# Trivy Reports
+*.sarif
+
+# OS files
+.DS_Store
+Thumbs.db
