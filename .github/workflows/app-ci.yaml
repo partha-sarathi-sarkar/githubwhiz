@@ -20,7 +20,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+          
       # Extract Version from package.json
       - name: Get version
         id: version
@@ -97,7 +102,7 @@ jobs:
       
 
       ## will add when scan results are fixed
-      
+
       # - name: Fail if Any Security Scan Failed
       #   if: steps.node_scan.outcome == 'failure' || steps.image_scan.outcome == 'failure'
       #   run: |
@@ -144,6 +149,10 @@ jobs:
           ghcr.io/${{ github.repository }}:latest
 
       
+      - name: Debug Docker Images
+        run: docker images
+
+
       # Push Images
       - name: Push Images
         run: |
