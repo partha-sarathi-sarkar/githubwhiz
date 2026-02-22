@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -169,12 +170,11 @@ jobs:
         if: success()
         run: |
           SHA=${{ github.sha }}
-          echo "Deploying SHA: $SHA to Render"
+          IMAGE="docker.io/${{ secrets.DOCKER_USERNAME }}/devops-tutorial:$SHA"
+
+          echo "Deploying image: $IMAGE"
+
           curl -X PATCH "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}" \
             -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
             -H "Content-Type: application/json" \
-            -d '{
-              "image": {
-                "tag": "'"$SHA"'"
-              }
-            }'
+            -d "{\"image\": {\"url\": \"$IMAGE\"}}"
