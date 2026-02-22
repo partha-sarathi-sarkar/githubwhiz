@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: 22
 
-          
+
       # Extract Version from package.json
       - name: Get version
         id: version
@@ -163,3 +163,18 @@ jobs:
           docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
           docker push ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
           docker push ghcr.io/${{ github.repository }}:latest
+
+
+      - name: Deploy SHA Image to Render
+        if: success()
+        run: |
+          SHA=${{ github.sha }}
+          echo "Deploying SHA: $SHA to Render"
+          curl -X PATCH "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "image": {
+                "tag": "'"$SHA"'"
+              }
+            }''
