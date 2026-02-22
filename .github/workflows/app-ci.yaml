@@ -26,7 +26,6 @@ jobs:
         with:
           node-version: 22
 
-
       # Extract Version from package.json
       - name: Get version
         id: version
@@ -110,7 +109,7 @@ jobs:
       #     echo "Security scan failed (Node or Image). Failing pipeline."
       #     exit 1
 
-      
+
       # Login DockerHub   
       - name: Login to DockerHub
         uses: docker/login-action@v3
@@ -163,18 +162,17 @@ jobs:
 
           docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
           docker push ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
-          docker push ghcr.io/${{ github.repository }}:latest
-
+          docker push ghcr.io/${{ github.repository }}:latest       
 
       - name: Deploy SHA Image to Render
         if: success()
         run: |
           SHA=${{ github.sha }}
-          IMAGE="docker.io/${{ secrets.DOCKER_USERNAME }}/devops-tutorial:$SHA"
-
-          echo "Deploying image: $IMAGE"
-
-          curl -X PATCH "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}" \
+          echo "Deploying SHA: $SHA"
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
             -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
             -H "Content-Type: application/json" \
-            -d "{\"image\": {\"url\": \"$IMAGE\"}}"
+            -d "{\"imageTag\": \"$SHA\"}")
+
+          echo "$RESPONSE"
