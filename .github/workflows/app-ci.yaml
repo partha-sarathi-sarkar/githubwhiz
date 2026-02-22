@@ -169,10 +169,6 @@ jobs:
         run: |
           SHA=${{ github.sha }}
           echo "Deploying SHA: $SHA"
-          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-            -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"imageTag\": \"$SHA\"}")
+          RESPONSE=$(curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}")
 
           echo "$RESPONSE"
